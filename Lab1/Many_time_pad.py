@@ -18,6 +18,7 @@ ciphertexts_hex = [
 ]
 
 ciphertexts = [binascii.unhexlify(c) for c in ciphertexts_hex]
+
 target_ciphertext = ciphertexts[-1]  # The final message to decrypt
 max_length = max(map(len, ciphertexts))
 
@@ -27,27 +28,34 @@ def xor_bytes(a, b):
 
 
 
-# Analyzing positions to detect spaces
+# create the shells to be used later, Counter object will help with the voting strategy
 recovered_key = [None] * max_length
 space_votes = [Counter() for _ in range(max_length)]
 
 for i in range(len(ciphertexts)):
     for j in range(i + 1, len(ciphertexts)):
         xor_result = xor_bytes(ciphertexts[i], ciphertexts[j])
+        #for each byte in the result
         for k, byte in enumerate(xor_result):
+            # then check if the byte corresponds to a string in ascii 
             if chr(byte) in string.printable and chr(byte).isalpha():
-                # Vote for space at position k in both ciphertexts
+                # This is because it might be a space at position (k) in the first message(i) or the second message(j) 
+                # As we go along and the i and j will be comared with others and which ever if this occurance happens again them its probable that character in that message
                 space_votes[k][i] += 1
                 space_votes[k][j] += 1
 
 # Determine the final key based on votes
 for pos, vote_count in enumerate(space_votes):
+    #here there space votes in of len (max_length)
+    #loop through the positions and extract the winner Ie the cypher candidate with the most votes for a space at that position(k) if there is one
     most_common = vote_count.most_common(1)
     if most_common :
+        # get the index of the winner for that position 
         candidate_cipher = most_common[0][0]
+        #get the value of the key at that position
         recovered_key[pos] = ciphertexts[candidate_cipher][pos] ^ ord(' ')
 
-# Decrypting the target ciphertext
+# decrypt the target ciphertext using the message  
 decrypted_message = []
 for i, byte in enumerate(target_ciphertext):
     if recovered_key[i] is not None:
